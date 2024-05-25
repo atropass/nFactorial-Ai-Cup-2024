@@ -14,7 +14,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY is not set in the environment variables")
 
-# Directory where uploaded images will be stored
 IMAGE_DIR = Path("uploaded_images")
 IMAGE_DIR.mkdir(exist_ok=True)
 
@@ -29,7 +28,22 @@ async def upload_image(file: UploadFile = File(...)):
     return {"id": file.filename, "message": "Image uploaded successfully"}
 
 @app.post("/analyze-image/{image_id}")
-async def analyze_image(image_id: str, prompt: str = "What’s in this image?"):
+async def analyze_image(image_id: str, prompt: str = '''
+                        
+You are a stylist and your job is to pick the best clothes according to the person's style, body build and 
+where they want to go in those clothes. 
+
+There will be 1 person on the picture and you should analyze only 
+the person and his clothes, do not pay attention to the background and so on. 
+Use a chain-of-though technique to analyze the person's clothes and suggest the best clothes for this person. 
+
+STRICTLY RETURN THE ANSWER IN JSON FORMAT
+EXAMPLE OF OUTPUT JSON: 
+{
+    "1": "Analysis of the person's clothes",
+    "2": "Suggestion of T-shirt for this person, only description of suggested cloth is enough, keywords are enough",
+}                     
+'''):
     image_path = IMAGE_DIR / image_id
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
@@ -51,7 +65,7 @@ async def send_image_to_openai(base64_image, prompt):
             "content": [
                 {
                 "type": "text",
-                "text": "What’s in this image?"
+                "text": prompt
                 },
                 {
                 "type": "image_url",
