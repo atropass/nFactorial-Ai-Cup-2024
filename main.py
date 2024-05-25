@@ -80,14 +80,14 @@ async def analyze_image(request: AnalyzeImageRequest, price_start: int = None, p
     prompt = generate_prompt(request.clothing_area, request.style)
     response = await send_image_to_openai(base64_image, prompt)
     db = get_db()
+
     filter_expr = []
-    brand = "Off-White"
-    if price_start is not None and price_end is not None:
-        filter_expr.append(f'price >= {price_start} AND price <= {price_end}')
-    elif price_start is not None:
+    if price_start is not None:
         filter_expr.append(f'price >= {price_start}')
-    elif price_end is not None:
+    if price_end is not None:
         filter_expr.append(f'price <= {price_end}')
+    if brand:
+        filter_expr.append(f'brand == "{brand}"')
     
     if brand:
         filter_expr.append(f'brand == "{brand}"')
@@ -208,5 +208,44 @@ async def send_image_to_openai(base64_image, prompt):
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
-    
+
+
+class CustomTextGPTRequest(BaseModel):
+    prompt: str
+    max_tokens: int = 150 
+
+@app.post("/custom-text-gpt-query/")
+async def custom_text_gpt_query(request: CustomTextGPTRequest):
+    """
+    Endpoint to process custom GPT queries with a user-defined text prompt.
+    """
+    response = await send_text_to_openai(request.prompt, request.max_tokens)
+    return response
+
+async def send_text_to_openai(prompt, max_tokens=150):
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENAI_API_KEY}"
+    }
+    payload = {
+        "model": "gpt-4o",
+        "messages": [
+            {
+                "role": "user",
+                "content": {
+                    "type": "text",
+                    "text": prompt
+                }
+            }
+        ],
+        "max_tokens": max_tokens
+    }
+    timeout = httpx.Timeout(10.0, connect=60.0) 
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(url, headers=headers, json=payload)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
 app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
