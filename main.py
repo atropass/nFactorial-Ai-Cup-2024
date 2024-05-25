@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import base64
 from dotenv import load_dotenv
+from search import get_db
+import json
 
 load_dotenv()  # Load environment variables
 
@@ -37,19 +39,17 @@ There will be 1 person on the picture and you should analyze only
 the person and his clothes, do not pay attention to the background and so on. 
 Use a chain-of-though technique to analyze the person's clothes and suggest the best clothes for this person. 
 
-STRICTLY RETURN THE ANSWER IN JSON FORMAT
-EXAMPLE OF OUTPUT JSON: 
-{
-    "1": "Analysis of the person's clothes",
-    "2": "Suggestion of T-shirt for this person, only description of suggested cloth is enough, keywords are enough",
-}                     
+ONLY RETURN the Suggestion of T-shirt for this person, only description of suggested cloth is enough, keywords are enough
+                
 '''):
     image_path = IMAGE_DIR / image_id
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     base64_image = encode_image(image_path)
     response = await send_image_to_openai(base64_image, prompt)
-    return response
+    db = get_db()
+    docs = db.similarity_search(response["choices"][0]["message"]["content"], k=5)
+    return docs
 
 async def send_image_to_openai(base64_image, prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -87,5 +87,7 @@ async def send_image_to_openai(base64_image, prompt):
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
+
+
 
 app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
