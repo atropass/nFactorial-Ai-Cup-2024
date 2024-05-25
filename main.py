@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Query
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Body
 from fastapi.staticfiles import StaticFiles
 import httpx
 import os
@@ -141,4 +141,46 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
+
+@app.post("/describe-image/")
+async def describe_image(base64_image: str = Body(..., embed=True)):
+    prompt = '''You are a stylist and your job is to pick the best clothes according to the person's style, body build and 
+    where they want to go in those clothes. There will be 1 person in the picture and you should analyze only 
+    the person and his clothes, do not pay attention to the background and so on. So give me very detailed description of the person's clothes.'''
+    response = await send_image_to_openai_for_description(base64_image, prompt)
+    return response
+
+
+async def send_image_to_openai_for_description(base64_image, prompt):
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENAI_API_KEY}"
+    }
+    payload = {
+        "model": "gpt-4o",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    },
+                    {
+                        "type": "image",
+                        "image": f"data:image/jpeg;base64,{base64_image}"
+                    }
+                ]
+            }
+        ],
+        "max_tokens": 300
+    }
+    timeout = httpx.Timeout(10.0, connect=60.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(url, headers=headers, json=payload)
+        return response.json()
+
+
+
+# app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
