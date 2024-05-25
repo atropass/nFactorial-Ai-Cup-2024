@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Body
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 import httpx
 import os
@@ -8,19 +8,21 @@ from dotenv import load_dotenv
 from search import get_db
 import json
 from enum import Enum
-import logging
-
-from datetime import datetime
-
-def configure_logging():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-configure_logging()
-
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 load_dotenv()
 
 app = FastAPI()
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
@@ -67,17 +69,16 @@ def generate_prompt(clothing_area: ClothingArea, style: Style):
     full_prompt = f"{base_prompt} {specific_prompt} {return_text}"
     return full_prompt
 
+class AnalyzeImageRequest(BaseModel):
+    image_base64: str
+    clothing_area: ClothingArea
+    style: Style
 
-@app.post("/analyze-image/{image_id}")
-async def analyze_image(image_id: str, 
-                        clothing_area: ClothingArea = Query(...), 
-                        style: Style = Query(...)):
-    # image_path = IMAGE_DIR / image_id
-    # if not image_path.exists():
-    #     raise HTTPException(status_code=404, detail="Image not found")
-    # base64_image = encode_image(image_path)
-    prompt = generate_prompt(clothing_area, style)
-    response = await send_image_to_openai(image_id, prompt)
+@app.post("/analyze-image/")
+async def analyze_image(request: AnalyzeImageRequest):
+    base64_image = request.image_base64
+    prompt = generate_prompt(request.clothing_area, request.style)
+    response = await send_image_to_openai(base64_image, prompt)
     db = get_db()
     docs = db.similarity_search(response["choices"][0]["message"]["content"], k=5)
     return docs
@@ -114,19 +115,19 @@ async def send_image_to_openai(base64_image, prompt):
         "model": "gpt-4o",
         "messages": [
             {
-            "role": "user",
-            "content": [
-                {
-                "type": "text",
-                "text": prompt
-                },
-                {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}"
-                }
-                }
-            ]
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    }
+                ]
             }
         ],
         "max_tokens": 300
@@ -134,24 +135,30 @@ async def send_image_to_openai(base64_image, prompt):
     timeout = httpx.Timeout(10.0, connect=60.0) 
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(url, headers=headers, json=payload)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
 
 
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
-
+class ImageRequest(BaseModel):
+    image_base64: str
 
 @app.post("/describe-image/")
-async def describe_image(base64_image: str = Body(..., embed=True)):
+async def describe_image(request: ImageRequest):
     prompt = '''You are a stylist and your job is to pick the best clothes according to the person's style, body build and 
     where they want to go in those clothes. There will be 1 person in the picture and you should analyze only 
     the person and his clothes, do not pay attention to the background and so on. So give me very detailed description of the person's clothes.'''
-    response = await send_image_to_openai_for_description(base64_image, prompt)
+    
+    base64_image = request.image_base64
+    
+    response = await send_image_to_openai(base64_image, prompt)
+    
     return response
 
-
-async def send_image_to_openai_for_description(base64_image, prompt):
+async def send_image_to_openai(base64_image, prompt):
     url = "https://api.openai.com/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
@@ -168,19 +175,21 @@ async def send_image_to_openai_for_description(base64_image, prompt):
                         "text": prompt
                     },
                     {
-                        "type": "image",
-                        "image": f"data:image/jpeg;base64,{base64_image}"
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
                     }
                 ]
             }
         ],
         "max_tokens": 300
     }
-    timeout = httpx.Timeout(10.0, connect=60.0)
+    timeout = httpx.Timeout(10.0, connect=60.0) 
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(url, headers=headers, json=payload)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
-
-
-
-# app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
+    
+app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
