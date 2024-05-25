@@ -1,11 +1,11 @@
 # nFactorial-Ai-Cup-2024
 Fork this repository and build nFactorial Ai Cup 2024 projects 
 
-## < Your Name >
+## < Aibar Berekeyev >
 
-## < Your App's Name >
+## < Attire >
 
-## < Your App's description, technical considerations, etc. >
+## < Attire allows you to find the perfect outfit for any occasion. Get a picture of yourself and let the AI do the rest. GPT 4o, Zilliz(VecDB), FastAPI, React, tailwind, typescript >
 
 
 ## Typeform to submit:

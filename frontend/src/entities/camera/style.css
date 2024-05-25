@@ -1,0 +1,3 @@
+.height-based-on-width {
+  height: calc(var(--tw-width) * 1.77);
+}

@@ -1,0 +1,18 @@
+.typing-container {
+  white-space: nowrap;
+  display: inline-block;
+  font-weight: 600;
+}
+
+.typing-text.erasing {
+  animation: typing 1s steps(30, end) reverse forwards;
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
