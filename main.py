@@ -183,7 +183,7 @@ async def send_image_to_openai(base64_image, prompt):
                 ]
             }
         ],
-        "max_tokens": 200
+        "max_tokens": 100
     }
     timeout = httpx.Timeout(10.0, connect=60.0) 
     async with httpx.AsyncClient(timeout=timeout) as client:
