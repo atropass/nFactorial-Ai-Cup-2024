@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp, Frown } from "lucide-react";
 import { ClothingCard } from "../../entities/clothing-card/clothing-card";
 import { motion } from "framer-motion";
-import { pageTransition, pageVariants } from "../../App";
+import { pageVariants } from "../../App";
 export const clothing = [
   {
     color: "#0E34A0",

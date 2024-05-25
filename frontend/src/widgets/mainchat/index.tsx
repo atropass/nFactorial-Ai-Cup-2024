@@ -30,19 +30,6 @@ import { ProductCard } from "../../entities/product-card/product-card";
 import { genders } from "../gender";
 import { $gender, setGender } from "../../features/set-gender/model";
 
-const icons: {
-  [key: string]: JSX.Element;
-} = {
-  Top: <ChevronUp size={16} color="white" />,
-  Down: <ChevronDown size={16} color="white" />,
-  "I don't know!": <Frown size={16} color="white" />,
-  "Clubbing and Nightlife": <Club size={16} color="white" />,
-  "Smart Casual": <Spade size={16} color="white" />,
-  "Special Occasions": <Heart size={16} color="white" />,
-  "Luxury and High-End": <Diamond size={16} color="white" />,
-  Man: <Dog size={16} color="white" />,
-  Woman: <Cat size={16} color="white" />,
-};
 
 const containerVariants = {
   hidden: { opacity: 1 },

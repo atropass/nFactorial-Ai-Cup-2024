@@ -1,6 +1,5 @@
 import { Product } from "../../features/upload-image/model";
 import { motion } from "framer-motion";
-import { getImage } from "../../features/get-image/model";
 
 interface ProductCardProps {
   product: Product;
