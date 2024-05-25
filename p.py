@@ -1,7 +1,30 @@
-import json
+import base64
 
-json_string = '  \"analysis\": \"The person is wearing a casual, comfortable outfit consisting of a black graphic T-shirt, black slim-fit pants, and white sneakers. The overall style appears relaxed and suitable for informal settings such as an event or a meetup. The glasses add a touch of personality to the outfit.\",\n    \"suggestion\": \"Considering the look and setting, a well-fitted denim jacket or a casual blazer could be added to elevate the style while maintaining comfort. Keywords: denim jacket, casual blazer, relaxed fit, comfortable, stylish\"\n}"}'
+def encode_image_to_base64(image_path):
+    """
+    Encodes an image to a base64 string and adds the appropriate MIME type prefix.
+    Args:
+    image_path (str): Path to the image file.
 
-dictionary = json.loads(json_string)
+    Returns:
+    str: Base64 encoded image string with MIME type prefix.
+    """
+    # Determine the file extension to set the correct MIME type
+    mime_type = "jpeg"  # Default to JPEG
+    if image_path.lower().endswith(".png"):
+        mime_type = "png"
+    elif image_path.lower().endswith(".gif"):
+        mime_type = "gif"
 
-print(dictionary)
+    # Read and encode the image
+    with open(image_path, "rb") as image_file:
+        base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+
+    # Return the base64 string with the appropriate prefix
+    return f"data:image/{mime_type};base64,{base64_image}"
+
+# Example usage:
+image_path = "uploaded_images/photo_2024-05-25_12-31-54.jpg"
+encoded_image = encode_image_to_base64(image_path)
+print(encoded_image)
+

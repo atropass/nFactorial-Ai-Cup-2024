@@ -8,6 +8,15 @@ from dotenv import load_dotenv
 from search import get_db
 import json
 from enum import Enum
+import logging
+
+from datetime import datetime
+
+def configure_logging():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+configure_logging()
+
 
 load_dotenv()
 
@@ -33,15 +42,15 @@ class Style(Enum):
     DATE = "date, romantic, dinner"
     LUXURY = "luxury and high-end"
 
-@app.post("/upload-image/")
-async def upload_image(file: UploadFile = File(...)):
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="File is not an image")
-    file_path = IMAGE_DIR / file.filename
-    with open(file_path, "wb") as buffer:
-        data = await file.read()
-        buffer.write(data)
-    return {"id": file.filename, "message": "Image uploaded successfully"}
+# @app.post("/upload-image/")
+# async def upload_image(file: UploadFile = File(...)):
+#     if not file.content_type.startswith('image/'):
+#         raise HTTPException(status_code=400, detail="File is not an image")
+#     file_path = IMAGE_DIR / file.filename
+#     with open(file_path, "wb") as buffer:
+#         data = await file.read()
+#         buffer.write(data)
+#     return {"id": file.filename, "message": "Image uploaded successfully"}
 
 def generate_prompt(clothing_area: ClothingArea, style: Style):
     base_prompt = f"""
@@ -63,12 +72,12 @@ def generate_prompt(clothing_area: ClothingArea, style: Style):
 async def analyze_image(image_id: str, 
                         clothing_area: ClothingArea = Query(...), 
                         style: Style = Query(...)):
-    image_path = IMAGE_DIR / image_id
-    if not image_path.exists():
-        raise HTTPException(status_code=404, detail="Image not found")
-    base64_image = encode_image(image_path)
+    # image_path = IMAGE_DIR / image_id
+    # if not image_path.exists():
+    #     raise HTTPException(status_code=404, detail="Image not found")
+    # base64_image = encode_image(image_path)
     prompt = generate_prompt(clothing_area, style)
-    response = await send_image_to_openai(base64_image, prompt)
+    response = await send_image_to_openai(image_id, prompt)
     db = get_db()
     docs = db.similarity_search(response["choices"][0]["message"]["content"], k=5)
     return docs
