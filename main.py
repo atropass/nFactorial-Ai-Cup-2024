@@ -80,7 +80,7 @@ async def analyze_image(request: AnalyzeImageRequest):
     prompt = generate_prompt(request.clothing_area, request.style)
     response = await send_image_to_openai(base64_image, prompt)
     db = get_db()
-    docs = db.similarity_search(response["choices"][0]["message"]["content"], k=5)
+    docs = db.similarity_search(response["choices"][0]["message"]["content"], k=8)
     return docs
         
 # @app.post("/analyze-image/{image_id}")
@@ -150,7 +150,8 @@ class ImageRequest(BaseModel):
 async def describe_image(request: ImageRequest):
     prompt = '''You are a stylist and your job is to pick the best clothes according to the person's style, body build and 
     where they want to go in those clothes. There will be 1 person in the picture and you should analyze only 
-    the person and his clothes, do not pay attention to the background and so on. So give me  detailed description of the person's clothes.'''
+    the person and his clothes, do not pay attention to the background and so on. So give me  detailed description of the person's clothes.
+    Answer only in 1 format like. You are wearing ... and ... and ... and, with some adjectives. Also you can praise the style and say it's all good BUT you can change ...'''
     
     base64_image = request.image_base64
     
