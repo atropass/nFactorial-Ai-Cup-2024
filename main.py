@@ -200,13 +200,13 @@ class CustomTextGPTRequest(BaseModel):
 
 @app.post("/custom-text-gpt-query/")
 async def custom_text_gpt_query(request: CustomTextGPTRequest):
-    """
-    Endpoint to process custom GPT queries with a user-defined text prompt.
-    """
     response = await send_text_to_openai(request.prompt, request.max_tokens)
     return response
 
 async def send_text_to_openai(prompt, max_tokens=150):
+    """
+    Helper function to send a text prompt to OpenAI's API.
+    """
     url = "https://api.openai.com/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
@@ -217,10 +217,7 @@ async def send_text_to_openai(prompt, max_tokens=150):
         "messages": [
             {
                 "role": "user",
-                "content": {
-                    "type": "text",
-                    "text": prompt
-                }
+                "content": prompt  # Directly using string here
             }
         ],
         "max_tokens": max_tokens
