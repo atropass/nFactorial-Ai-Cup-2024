@@ -150,7 +150,7 @@ class ImageRequest(BaseModel):
 async def describe_image(request: ImageRequest):
     prompt = '''You are a stylist and your job is to pick the best clothes according to the person's style, body build and 
     where they want to go in those clothes. There will be 1 person in the picture and you should analyze only 
-    the person and his clothes, do not pay attention to the background and so on. So give me very detailed description of the person's clothes.'''
+    the person and his clothes, do not pay attention to the background and so on. So give me  detailed description of the person's clothes.'''
     
     base64_image = request.image_base64
     
@@ -183,7 +183,7 @@ async def send_image_to_openai(base64_image, prompt):
                 ]
             }
         ],
-        "max_tokens": 300
+        "max_tokens": 200
     }
     timeout = httpx.Timeout(10.0, connect=60.0) 
     async with httpx.AsyncClient(timeout=timeout) as client:
