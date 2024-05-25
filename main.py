@@ -10,8 +10,6 @@ import json
 from enum import Enum
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import requests
-import time
 
 load_dotenv()
 
@@ -29,12 +27,6 @@ app.add_middleware(
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY is not set in the environment variables")
-
-
-REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY")
-if not REPLICATE_API_KEY:
-    raise RuntimeError("REPLICATE_API_KEY is not set in the environment variables")
-
 
 IMAGE_DIR = Path("uploaded_images")
 IMAGE_DIR.mkdir(exist_ok=True)
@@ -237,69 +229,4 @@ async def send_text_to_openai(prompt, max_tokens=150):
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
 
-class ReplicateService:
-    async def start_replicate_prediction(self, base64_image, prompt_string):
-        startResponse = requests.post(
-            "https://api.replicate.com/v1/predictions",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": "Token " + REPLICATE_API_KEY,
-            },
-            json={
-                "version": "854e8727697a057c525cdb45ab037f64ecca770a1769cc52287c2e56472a247b",
-                "input": {
-                    "image": f"data:image/jpeg;base64,{base64_image}",
-                    "prompt": prompt_string,
-                    "image_resolution": "768",
-                    "n_prompt": "text, letters, logo, longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, trees",
-                },
-            },
-        )
-
-        return startResponse.json()
-
-    async def poll_replicate_prediction(self, endpointUrl):
-        restoredImage = None
-        while not restoredImage:
-            print("polling for result...")
-            finalResponse = requests.get(
-                endpointUrl,
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": "Token " + REPLICATE_API_KEY,
-                },
-            )
-            finalResponseData = finalResponse.json()
-
-            if finalResponseData["status"] == "succeeded":
-                restoredImage = finalResponseData["output"]
-            elif finalResponseData["status"] == "failed":
-                break
-            else:
-                time.sleep(1)
-
-        return restoredImage
-
 app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
-
-
-class StartPredictionRequest(BaseModel):
-    image_base64: str
-    prompt_string: str
-
-replicate_service = ReplicateService()
-
-@app.post("/start-replicate-prediction/")
-async def start_replicate_prediction(request: StartPredictionRequest):
-    start_response = await replicate_service.start_replicate_prediction(request.image_base64, request.prompt_string)
-    if 'error' in start_response:
-        raise HTTPException(status_code=400, detail=start_response['error'])
-    
-    prediction_id = start_response.get('id')
-    endpoint_url = f"https://api.replicate.com/v1/predictions/{prediction_id}"
-    
-    restored_image = await replicate_service.poll_replicate_prediction(endpoint_url)
-    if not restored_image:
-        raise HTTPException(status_code=500, detail="Prediction failed")
-    
-    return {"restored_image": restored_image}
