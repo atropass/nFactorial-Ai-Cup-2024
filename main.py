@@ -75,13 +75,29 @@ class AnalyzeImageRequest(BaseModel):
     style: Style
 
 @app.post("/analyze-image/")
-async def analyze_image(request: AnalyzeImageRequest):
+async def analyze_image(request: AnalyzeImageRequest, price_start: int = None, price_end: int = None, brand: str = None):
     base64_image = request.image_base64
     prompt = generate_prompt(request.clothing_area, request.style)
     response = await send_image_to_openai(base64_image, prompt)
     db = get_db()
-    docs = db.similarity_search(response["choices"][0]["message"]["content"], k=8)
-    return docs
+    filter_expr = []
+    brand = "Off-White"
+    if price_start is not None and price_end is not None:
+        filter_expr.append(f'price >= {price_start} AND price <= {price_end}')
+    elif price_start is not None:
+        filter_expr.append(f'price >= {price_start}')
+    elif price_end is not None:
+        filter_expr.append(f'price <= {price_end}')
+    
+    if brand:
+        filter_expr.append(f'brand == "{brand}"')
+
+    # Combine filter expressions into a single string
+    combined_expr = " AND ".join(filter_expr) if filter_expr else None
+
+    # Perform the similarity search using the combined expression
+    return db.similarity_search(query=response, k=8, expr=combined_expr)
+
         
 # @app.post("/analyze-image/{image_id}")
 # async def analyze_image(image_id: str, prompt: str = '''
